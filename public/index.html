@@ -42,9 +42,25 @@
       <textarea id="steer" rows="8" placeholder="Optional. For example: Focus on security boundaries and unsafe input handling. Leave blank for a general improvement pass."></textarea>
     </section>
 
-    <section class="action-panel">
+    <section id="actionPanel" class="action-panel">
       <button id="goButton" class="go" type="button" disabled>Go</button>
-      <p id="status" class="status">Select a folder or files to begin.</p>
+      <div class="action-content">
+        <div class="status-row">
+          <span id="activityIndicator" class="activity-indicator" hidden>
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+          <p id="status" class="status">Select a folder or files to begin.</p>
+        </div>
+        <div id="auditMeta" class="audit-meta" hidden>
+          <span>Elapsed</span>
+          <strong id="elapsedTimer">00:00</strong>
+        </div>
+        <div id="progressTrack" class="progress-track" hidden>
+          <span></span>
+        </div>
+      </div>
     </section>
 
     <section id="resultPanel" class="panel result-panel" hidden>
