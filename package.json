@@ -1,0 +1,15 @@
+{
+  "name": "fibonacci",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local UI for running steerable, read-only repository audits with OpenCode.",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server/index.js",
+    "start": "node server/index.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
