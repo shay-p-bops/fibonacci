@@ -2,7 +2,8 @@ const state = {
   paths: [],
   running: false,
   auditStartedAt: null,
-  timerId: null
+  timerId: null,
+  outputDirectory: null
 };
 
 const folderButton = document.querySelector('#folderButton');
@@ -10,6 +11,8 @@ const filesButton = document.querySelector('#filesButton');
 const clearButton = document.querySelector('#clearButton');
 const goButton = document.querySelector('#goButton');
 const steerInput = document.querySelector('#steer');
+const setupDetails = document.querySelector('#setupDetails');
+const setupSummary = document.querySelector('#setupSummary');
 const actionPanel = document.querySelector('#actionPanel');
 const status = document.querySelector('#status');
 const activityIndicator = document.querySelector('#activityIndicator');
@@ -23,11 +26,14 @@ const resultRepo = document.querySelector('#resultRepo');
 const resultCount = document.querySelector('#resultCount');
 const resultFolder = document.querySelector('#resultFolder');
 const resultFiles = document.querySelector('#resultFiles');
+const openResultsButton = document.querySelector('#openResultsButton');
 
 folderButton.addEventListener('click', () => choose('folder'));
 filesButton.addEventListener('click', () => choose('files'));
 clearButton.addEventListener('click', clearSelection);
 goButton.addEventListener('click', runAudit);
+steerInput.addEventListener('input', updateSetupSummary);
+openResultsButton.addEventListener('click', openResultsFolder);
 
 async function choose(type) {
   setStatus(type === 'folder' ? 'Opening folder picker…' : 'Opening file picker…');
@@ -41,6 +47,7 @@ async function choose(type) {
     const data = await readResponse(response);
     if (data.paths.length > 0) {
       state.paths = data.paths;
+      state.outputDirectory = null;
       renderSelection();
       resultPanel.hidden = true;
       setStatus(`${data.paths.length} path${data.paths.length === 1 ? '' : 's'} selected.`);
@@ -57,6 +64,7 @@ async function choose(type) {
 function clearSelection() {
   if (state.running) return;
   state.paths = [];
+  state.outputDirectory = null;
   renderSelection();
   resultPanel.hidden = true;
   setStatus('Select a folder or files to begin.');
@@ -66,8 +74,10 @@ async function runAudit() {
   if (state.running || state.paths.length === 0) return;
 
   state.running = true;
+  state.outputDirectory = null;
   resultPanel.hidden = true;
   setControlsDisabled(true);
+  setupDetails.open = false;
   startAuditFeedback();
   setStatus('OpenCode is auditing the selected scope. Larger repositories can take a while.');
 
@@ -79,6 +89,7 @@ async function runAudit() {
     });
     const result = await readResponse(response);
     const elapsed = stopAuditFeedback();
+    state.outputDirectory = result.outputDirectory;
     renderResult(result);
     setStatus(`Audit complete in ${formatElapsed(elapsed)}. ${result.findingCount} finding${result.findingCount === 1 ? '' : 's'} written.`);
   } catch (error) {
@@ -88,6 +99,27 @@ async function runAudit() {
     stopAuditFeedback();
     state.running = false;
     setControlsDisabled(false);
+  }
+}
+
+async function openResultsFolder() {
+  if (!state.outputDirectory) return;
+
+  openResultsButton.disabled = true;
+  openResultsButton.textContent = 'Opening…';
+  try {
+    const response = await fetch('/api/open-path', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: state.outputDirectory })
+    });
+    await readResponse(response);
+    setStatus('Opened the audit output folder.');
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    openResultsButton.disabled = false;
+    openResultsButton.textContent = 'Open output folder';
   }
 }
 
@@ -146,7 +178,21 @@ function renderSelection() {
     item.textContent = selectedPath;
     selectionList.append(item);
   }
+
+  updateSetupSummary();
   updateGoButton();
+}
+
+function updateSetupSummary() {
+  if (state.paths.length === 0) {
+    setupSummary.textContent = 'Choose scope and optional steer';
+    return;
+  }
+
+  const scope = `${state.paths.length} path${state.paths.length === 1 ? '' : 's'}`;
+  const steer = steerInput.value.trim();
+  const lens = steer ? truncate(steer, 64) : 'General improvement pass';
+  setupSummary.textContent = `${scope} · ${lens}`;
 }
 
 function renderResult(result) {
@@ -188,6 +234,10 @@ function updateGoButton() {
 function setStatus(message, isError = false) {
   status.textContent = message;
   status.classList.toggle('error', isError);
+}
+
+function truncate(value, maxLength) {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 1)}…`;
 }
 
 async function readResponse(response) {
