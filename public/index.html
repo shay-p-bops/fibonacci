@@ -8,39 +8,50 @@
 </head>
 <body>
   <main class="shell">
-    <header>
-      <p class="eyebrow">Local repository auditor</p>
-      <h1>Fibonacci</h1>
-      <p class="intro">Choose a repository or selected files, give the audit an optional steer, and generate one Markdown handoff per finding.</p>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Local repository auditor</p>
+        <h1>Fibonacci</h1>
+      </div>
+      <p class="intro">Run a steerable OpenCode audit and create one Markdown handoff per finding.</p>
     </header>
 
-    <section class="panel">
-      <div class="section-heading">
-        <div>
-          <span class="step">1</span>
-          <h2>Select scope</h2>
-        </div>
-        <button id="clearButton" class="quiet" type="button">Clear</button>
-      </div>
+    <details id="setupDetails" class="setup-details" open>
+      <summary>
+        <span>Audit setup</span>
+        <span id="setupSummary" class="setup-summary">Choose scope and optional steer</span>
+      </summary>
 
-      <div class="button-row">
-        <button id="folderButton" type="button">Choose repository folder</button>
-        <button id="filesButton" class="secondary" type="button">Choose individual files</button>
-      </div>
+      <div class="setup-content">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="step">1</span>
+              <h2>Select scope</h2>
+            </div>
+            <button id="clearButton" class="quiet" type="button">Clear</button>
+          </div>
 
-      <div id="selectionEmpty" class="empty-state">Nothing selected.</div>
-      <ul id="selectionList" class="path-list"></ul>
-    </section>
+          <div class="button-row">
+            <button id="folderButton" type="button">Choose repository folder</button>
+            <button id="filesButton" class="secondary" type="button">Choose individual files</button>
+          </div>
 
-    <section class="panel">
-      <div class="section-heading">
-        <div>
-          <span class="step">2</span>
-          <h2>Steer the audit</h2>
-        </div>
+          <div id="selectionEmpty" class="empty-state">Nothing selected.</div>
+          <ul id="selectionList" class="path-list"></ul>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="step">2</span>
+              <h2>Steer the audit</h2>
+            </div>
+          </div>
+          <textarea id="steer" rows="7" placeholder="Optional. For example: Focus on security boundaries and unsafe input handling. Leave blank for a general improvement pass."></textarea>
+        </section>
       </div>
-      <textarea id="steer" rows="8" placeholder="Optional. For example: Focus on security boundaries and unsafe input handling. Leave blank for a general improvement pass."></textarea>
-    </section>
+    </details>
 
     <section id="actionPanel" class="action-panel">
       <button id="goButton" class="go" type="button" disabled>Go</button>
@@ -69,6 +80,7 @@
           <span class="step">✓</span>
           <h2>Audit complete</h2>
         </div>
+        <button id="openResultsButton" class="secondary" type="button">Open output folder</button>
       </div>
       <dl class="result-grid">
         <div>
