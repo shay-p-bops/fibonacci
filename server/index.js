@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { runAudit } from './audit.js';
 import { readConfig } from './env.js';
@@ -10,6 +11,7 @@ const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const publicRoot = path.join(appRoot, 'public');
 const config = readConfig(appRoot);
 let auditRunning = false;
+let latestAuditOutputDirectory = null;
 
 const server = http.createServer(async (request, response) => {
   try {
@@ -40,10 +42,27 @@ const server = http.createServer(async (request, response) => {
           selectedPaths: body.paths,
           steer: body.steer
         });
+        latestAuditOutputDirectory = path.resolve(result.outputDirectory);
         return sendJson(response, 200, result);
       } finally {
         auditRunning = false;
       }
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/open-path') {
+      const body = await readJsonBody(request);
+      const targetPath = path.resolve(String(body.path || ''));
+
+      if (!latestAuditOutputDirectory || targetPath !== latestAuditOutputDirectory) {
+        return sendJson(response, 403, { error: 'Only the latest audit output folder can be opened.' });
+      }
+
+      if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isDirectory()) {
+        return sendJson(response, 404, { error: 'The audit output folder no longer exists.' });
+      }
+
+      await openDirectory(targetPath);
+      return sendJson(response, 200, { ok: true });
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -64,6 +83,42 @@ server.listen(config.port, config.host, () => {
     ? 'OpenCode mock mode is enabled.'
     : `OpenCode executable: ${config.openCodeBin}`);
 });
+
+function openDirectory(targetPath) {
+  let command;
+  let args;
+
+  switch (process.platform) {
+    case 'darwin':
+      command = 'open';
+      args = [targetPath];
+      break;
+    case 'win32':
+      command = 'explorer.exe';
+      args = [targetPath];
+      break;
+    case 'linux':
+      command = 'xdg-open';
+      args = [targetPath];
+      break;
+    default:
+      throw new Error(`Opening folders is not supported on ${process.platform}.`);
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true
+    });
+
+    child.once('error', reject);
+    child.once('spawn', () => {
+      child.unref();
+      resolve();
+    });
+  });
+}
 
 function serveStaticFile(requestPath, headOnly, response) {
   const relativePath = requestPath === '/' ? 'index.html' : decodeURIComponent(requestPath.slice(1));
