@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fibonacci</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">Local repository auditor</p>
+      <h1>Fibonacci</h1>
+      <p class="intro">Choose a repository or selected files, give the audit an optional steer, and generate one Markdown handoff per finding.</p>
+    </header>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <span class="step">1</span>
+          <h2>Select scope</h2>
+        </div>
+        <button id="clearButton" class="quiet" type="button">Clear</button>
+      </div>
+
+      <div class="button-row">
+        <button id="folderButton" type="button">Choose repository folder</button>
+        <button id="filesButton" class="secondary" type="button">Choose individual files</button>
+      </div>
+
+      <div id="selectionEmpty" class="empty-state">Nothing selected.</div>
+      <ul id="selectionList" class="path-list"></ul>
+    </section>
+
+    <section class="panel">
+      <div class="section-heading">
+        <div>
+          <span class="step">2</span>
+          <h2>Steer the audit</h2>
+        </div>
+      </div>
+      <textarea id="steer" rows="8" placeholder="Optional. For example: Focus on security boundaries and unsafe input handling. Leave blank for a general improvement pass."></textarea>
+    </section>
+
+    <section class="action-panel">
+      <button id="goButton" class="go" type="button" disabled>Go</button>
+      <p id="status" class="status">Select a folder or files to begin.</p>
+    </section>
+
+    <section id="resultPanel" class="panel result-panel" hidden>
+      <div class="section-heading">
+        <div>
+          <span class="step">✓</span>
+          <h2>Audit complete</h2>
+        </div>
+      </div>
+      <dl class="result-grid">
+        <div>
+          <dt>Repository</dt>
+          <dd id="resultRepo"></dd>
+        </div>
+        <div>
+          <dt>Findings</dt>
+          <dd id="resultCount"></dd>
+        </div>
+        <div class="wide">
+          <dt>Output folder</dt>
+          <dd id="resultFolder"></dd>
+        </div>
+      </dl>
+      <ul id="resultFiles" class="path-list result-files"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
