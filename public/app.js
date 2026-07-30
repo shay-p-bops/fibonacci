@@ -1,6 +1,8 @@
 const state = {
   paths: [],
-  running: false
+  running: false,
+  auditStartedAt: null,
+  timerId: null
 };
 
 const folderButton = document.querySelector('#folderButton');
@@ -8,7 +10,12 @@ const filesButton = document.querySelector('#filesButton');
 const clearButton = document.querySelector('#clearButton');
 const goButton = document.querySelector('#goButton');
 const steerInput = document.querySelector('#steer');
+const actionPanel = document.querySelector('#actionPanel');
 const status = document.querySelector('#status');
+const activityIndicator = document.querySelector('#activityIndicator');
+const auditMeta = document.querySelector('#auditMeta');
+const elapsedTimer = document.querySelector('#elapsedTimer');
+const progressTrack = document.querySelector('#progressTrack');
 const selectionList = document.querySelector('#selectionList');
 const selectionEmpty = document.querySelector('#selectionEmpty');
 const resultPanel = document.querySelector('#resultPanel');
@@ -61,7 +68,8 @@ async function runAudit() {
   state.running = true;
   resultPanel.hidden = true;
   setControlsDisabled(true);
-  setStatus('OpenCode is auditing the selected scope. This request stays open until the audit completes.');
+  startAuditFeedback();
+  setStatus('OpenCode is auditing the selected scope. Larger repositories can take a while.');
 
   try {
     const response = await fetch('/api/audit', {
@@ -70,14 +78,63 @@ async function runAudit() {
       body: JSON.stringify({ paths: state.paths, steer: steerInput.value })
     });
     const result = await readResponse(response);
+    const elapsed = stopAuditFeedback();
     renderResult(result);
-    setStatus(`Audit complete. ${result.findingCount} finding${result.findingCount === 1 ? '' : 's'} written.`);
+    setStatus(`Audit complete in ${formatElapsed(elapsed)}. ${result.findingCount} finding${result.findingCount === 1 ? '' : 's'} written.`);
   } catch (error) {
-    setStatus(error.message, true);
+    const elapsed = stopAuditFeedback();
+    setStatus(`Audit stopped after ${formatElapsed(elapsed)}. ${error.message}`, true);
   } finally {
+    stopAuditFeedback();
     state.running = false;
     setControlsDisabled(false);
   }
+}
+
+function startAuditFeedback() {
+  state.auditStartedAt = Date.now();
+  actionPanel.classList.add('running');
+  activityIndicator.hidden = false;
+  auditMeta.hidden = false;
+  progressTrack.hidden = false;
+  elapsedTimer.textContent = '00:00';
+  updateGoButton();
+  state.timerId = window.setInterval(updateElapsedTimer, 1000);
+  actionPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function stopAuditFeedback() {
+  const elapsed = state.auditStartedAt ? Date.now() - state.auditStartedAt : 0;
+
+  if (state.timerId !== null) {
+    window.clearInterval(state.timerId);
+    state.timerId = null;
+  }
+
+  state.auditStartedAt = null;
+  actionPanel.classList.remove('running');
+  activityIndicator.hidden = true;
+  auditMeta.hidden = true;
+  progressTrack.hidden = true;
+  return elapsed;
+}
+
+function updateElapsedTimer() {
+  if (!state.auditStartedAt) return;
+  elapsedTimer.textContent = formatElapsed(Date.now() - state.auditStartedAt);
+}
+
+function formatElapsed(milliseconds) {
+  const totalSeconds = Math.max(0, Math.floor(milliseconds / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function renderSelection() {
@@ -124,7 +181,8 @@ function setControlsDisabled(disabled) {
 
 function updateGoButton() {
   goButton.disabled = state.running || state.paths.length === 0 || folderButton.disabled;
-  goButton.textContent = state.running ? 'Auditing…' : 'Go';
+  goButton.textContent = state.running ? 'Auditing' : 'Go';
+  goButton.classList.toggle('running', state.running);
 }
 
 function setStatus(message, isError = false) {
